@@ -1,0 +1,80 @@
+
+name: DevOps Task Manager CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:8
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend server
+        working-directory: backend
+        env:
+          PORT: 5000
+          MONGO_URI: mongodb://127.0.0.1:27017/devops_task_manager
+          JWT_SECRET: test_secret_for_ci_only
+        run: |
+          npm start > server.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Wait for backend
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:5000/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat backend/server.log
+          exit 1
+
+      - name: Run automated tests
+        working-directory: backend
+        env:
+          PORT: 5000
+          MONGO_URI: mongodb://127.0.0.1:27017/devops_task_manager
+          JWT_SECRET: test_secret_for_ci_only
+        run: npm test
+
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
