@@ -1,4 +1,5 @@
-﻿name: DevOps Task Manager CI/CD
+﻿
+name: DevOps Task Manager CI/CD
 
 on:
   push:
@@ -10,8 +11,8 @@ on:
 
 jobs:
   backend-test:
-    name: Backend Tests
-    runs-on: ubuntu-latest
+    name: Backend Tests and Code Quality
+    runs-on: ubuntu-22.04
 
     services:
       mongodb:
@@ -39,6 +40,14 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Backend ESLint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Backend Security Audit
+        working-directory: backend
+        run: npm audit --omit=dev
+
       - name: Wait for MongoDB
         run: |
           echo "Waiting for MongoDB..."
@@ -47,7 +56,6 @@ jobs:
               echo "MongoDB is ready!"
               exit 0
             fi
-            echo "MongoDB not ready yet. Attempt $i/30"
             sleep 2
           done
           echo "MongoDB did not become ready."
@@ -74,7 +82,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "Backend failed to start. Logs:"
+          echo "Backend failed to start."
           cat backend/server.log
           exit 1
 
@@ -94,7 +102,7 @@ jobs:
           fi
 
   frontend-build:
-    name: Frontend Build
+    name: Frontend Build and Code Quality
     runs-on: ubuntu-latest
 
     steps:
@@ -112,15 +120,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build Frontend
-        working-directory: frontend
-        run: npm run build
-
-      - name: Backend ESLint
-        working-directory: backend
-        run: npm run lint
-
       - name: Frontend ESLint
         working-directory: frontend
         run: npm run lint
 
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
