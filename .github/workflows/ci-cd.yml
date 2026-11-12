@@ -116,3 +116,11 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Backend ESLint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Frontend ESLint
+        working-directory: frontend
+        run: npm run lint
+
